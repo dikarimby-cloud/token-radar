@@ -189,6 +189,7 @@
         el('div', { class: 'fact' }, el('span', { text: 'Watchlist covered' }), el('b', { text: DATA.watchlist_size + ' / ' + DATA.watchlist_size })),
         el('div', { class: 'fact' }, el('span', { text: 'Pre-token rows scored' }), el('b', { text: String(DATA.board_size) })),
         el('div', { class: 'fact' }, el('span', { text: 'Early rows below the floor' }), el('b', { text: String(DATA.early_size) })),
+        el('div', { class: 'fact' }, el('span', { text: 'Total implied value' }), el('b', { text: fmtUsd(DATA.summary.total_implied_usd) })),
         el('div', { class: 'fact' }, el('span', { text: 'Live-token set aside' }), el('b', { text: String(DATA.live_size) }))
       )
     );
@@ -335,6 +336,16 @@
     var multRows = Object.keys(DATA.category_multiples).sort().map(function (cat) {
       return el('tr', null, el('td', { text: cat }), el('td', { class: 'num', text: DATA.category_multiples[cat].toFixed(4) }));
     });
+    var catRows = DATA.categories.map(function (c) {
+      return el('tr', null,
+        el('td', { text: c.category }),
+        el('td', { class: 'num', text: String(c.rows) }),
+        el('td', { text: c.top_name }),
+        el('td', { class: 'num', text: fmtUsd(c.top_implied_usd) }),
+        el('td', { class: 'num', text: fmtUsd(c.total_implied_usd) }),
+        el('td', { class: 'num', text: c.multiple.toFixed(4) })
+      );
+    });
     return el('section', { class: 'panel model' },
       el('h2', { text: 'How implied value is computed' }),
       el('p', { class: 'sub', text: 'Every row is scored by one function of the snapshot figures. No protocol name is special-cased, and no row is hand-picked.' }),
@@ -342,9 +353,22 @@
         'implied = round( tvl_usd x categoryMultiple x (1 + clamp(change_7d, ' + m.growth_floor + ', ' + m.growth_cap + ') / 100 x ' + m.growth_weight + ') x (' + m.maturity_floor + ' + min(age_days, ' + m.maturity_days + ') / ' + m.maturity_days + ' x ' + m.maturity_range + ') x (1 + min(chains - 1, ' + m.chain_max_bonus + ') x ' + m.chain_step + ') )'
       ),
       el('p', { class: 'sub', text: 'The category multiple is the median market-cap to TVL ratio of the live-token protocols in the same category, read off this snapshot (overall median ' + DATA.overall_multiple.toFixed(4) + ' where a category has too few). Age is the time since the protocol was first listed, the best record of how long it has run with no token; an unlisted age uses ' + m.unknown_age_days + ' days.' }),
+      el('p', { class: 'sub', text: 'The whole board is worth ' + fmtUsd(DATA.summary.total_implied_usd) + ' of implied value (median row ' + fmtUsd(DATA.summary.median_implied_usd) + '): the watchlist carries ' + fmtUsd(DATA.summary.watchlist_implied_usd) + ' over ' + DATA.summary.watchlist_rows + ' rows, the early radar ' + fmtUsd(DATA.summary.early_implied_usd) + ' over ' + DATA.summary.early_rows + ' rows.' }),
       el('table', { class: 'mult-table' },
         el('thead', null, el('tr', null, el('th', { scope: 'col', text: 'Category' }), el('th', { scope: 'col', text: 'Multiple' }))),
         el('tbody', null, multRows)
+      ),
+      el('h3', { text: 'Where the implied value sits, by category' }),
+      el('table', { class: 'mult-table' },
+        el('thead', null, el('tr', null,
+          el('th', { scope: 'col', text: 'Category' }),
+          el('th', { scope: 'col', text: 'Rows' }),
+          el('th', { scope: 'col', text: 'Strongest protocol' }),
+          el('th', { scope: 'col', text: 'Its implied value' }),
+          el('th', { scope: 'col', text: 'Category total' }),
+          el('th', { scope: 'col', text: 'Multiple' }
+          ))),
+        el('tbody', null, catRows)
       )
     );
   }

@@ -88,5 +88,7 @@ writeFileSync(join(out, 'dossier.json'), buildDossier(out, { text_max_bytes: TEX
 
 process.stdout.write(
   `token radar: ${snapshot.protocols.length} protocols, ${snapshot.watchlist.length} on the watchlist, ${board.length} rows scored (${radar.early_size} early, ${radar.live_size} live set aside, ${radar.set_aside_size} wrapped/staked set aside)\n` +
+    `token radar: total implied value $${radar.summary.total_implied_usd.toLocaleString('en-US')} (median $${radar.summary.median_implied_usd.toLocaleString('en-US')}); watchlist $${radar.summary.watchlist_implied_usd.toLocaleString('en-US')} over ${radar.summary.watchlist_rows} rows, early $${radar.summary.early_implied_usd.toLocaleString('en-US')} over ${radar.summary.early_rows} rows\n` +
+    `token radar: strongest categories: ${radar.categories.slice(0, 3).map((c) => `${c.category} ($${c.total_implied_usd.toLocaleString('en-US')}, ${c.rows} rows, top ${c.top_name})`).join('; ')}\n` +
     `token radar: wrote ${join(out, 'board.json')}, ${join(out, 'data.js')}, ${join(out, 'dashboard')} (${dashFiles.length} files), ${join(out, 'screenshots')} (${shots.length} images) and ${join(out, 'dossier.json')}\n`,
 );

@@ -162,6 +162,27 @@ export interface SetAsideRow {
   reason: string;
 }
 
+/** One category's share of the board: how many rows it holds, its strongest protocol, and what its rows are worth together. */
+export interface CategorySummary {
+  category: string;
+  rows: number;
+  top_slug: string;
+  top_name: string;
+  top_implied_usd: number;
+  total_implied_usd: number;
+  multiple: number;
+}
+
+/** The board's own totals: what the whole radar is worth, and how the watchlist and the early rows split it. */
+export interface BoardSummary {
+  total_implied_usd: number;
+  median_implied_usd: number;
+  watchlist_rows: number;
+  watchlist_implied_usd: number;
+  early_rows: number;
+  early_implied_usd: number;
+}
+
 /** Everything the dashboard needs: the board, the live set, the set-aside set, and the model it runs. */
 export interface RadarData {
   as_of: string;
@@ -176,6 +197,8 @@ export interface RadarData {
   set_aside_size: number;
   category_multiples: Record<string, number>;
   overall_multiple: number;
+  categories: CategorySummary[];
+  summary: BoardSummary;
   rows: RadarRow[];
   live: LiveRow[];
   set_aside: SetAsideRow[];
@@ -503,6 +526,58 @@ export function setAsideRows(snapshot: Snapshot): SetAsideRow[] {
     }));
 }
 
+/** One category's share of the board, strongest total first. */
+export function categorySummaries(board: BoardRow[], multiples: { byCategory: Record<string, number>; overall: number }): CategorySummary[] {
+  const byCat = new Map<string, BoardRow[]>();
+  for (const row of board) {
+    const key = row.category ?? 'Other';
+    const list = byCat.get(key);
+    if (list) list.push(row);
+    else byCat.set(key, [row]);
+  }
+  const out: CategorySummary[] = [];
+  for (const [category, rows] of byCat) {
+    const sorted = rows.slice().sort((a, b) => b.implied_value_usd - a.implied_value_usd);
+    const top = sorted[0]!;
+    out.push({
+      category,
+      rows: rows.length,
+      top_slug: top.slug,
+      top_name: top.name,
+      top_implied_usd: top.implied_value_usd,
+      total_implied_usd: rows.reduce((sum, r) => sum + r.implied_value_usd, 0),
+      multiple: multipleFor(category === 'Other' ? null : category, multiples),
+    });
+  }
+  out.sort((a, b) => b.total_implied_usd - a.total_implied_usd || (a.category < b.category ? -1 : a.category > b.category ? 1 : 0));
+  return out;
+}
+
+/** The board's own totals, and how the watchlist and the early rows split them. */
+export function boardSummary(board: BoardRow[], watchlist: string[]): BoardSummary {
+  const watch = new Set(watchlist);
+  const implied = board.map((r) => r.implied_value_usd).sort((a, b) => a - b);
+  const mid = Math.floor(implied.length / 2);
+  const median = implied.length === 0 ? 0 : implied.length % 2 === 1 ? implied[mid]! : Math.round((implied[mid - 1]! + implied[mid]!) / 2);
+  let watchRows = 0;
+  let watchImplied = 0;
+  for (const row of board) {
+    if (watch.has(row.slug)) {
+      watchRows++;
+      watchImplied += row.implied_value_usd;
+    }
+  }
+  const total = board.reduce((sum, r) => sum + r.implied_value_usd, 0);
+  return {
+    total_implied_usd: total,
+    median_implied_usd: median,
+    watchlist_rows: watchRows,
+    watchlist_implied_usd: watchImplied,
+    early_rows: board.length - watchRows,
+    early_implied_usd: total - watchImplied,
+  };
+}
+
 /** A board row's compact form for data.js, with the farm plan generated in the page.
  *  The category multiple is kept at full precision here, so the page's recompute
  *  of the implied value lands on the same integer board.json carries; the board
@@ -547,6 +622,8 @@ export function buildRadar(snapshot: Snapshot, model: ModelConstants = MODEL): {
     set_aside_size: setAside.length,
     category_multiples: multiples.byCategory,
     overall_multiple: multiples.overall,
+    categories: categorySummaries(board, multiples),
+    summary: boardSummary(board, snapshot.watchlist),
     rows: board.map((r) => radarRow(r, multiples)),
     live,
     set_aside: setAside,

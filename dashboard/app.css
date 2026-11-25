@@ -55,6 +55,7 @@ th button{background:none;border:0;color:inherit;font:inherit;cursor:pointer;pad
 .button.primary{background:var(--amber);border-color:var(--amber);color:#151005;font-weight:700}
 .model{padding:16px 18px}
 .model h2{margin:0 0 6px;font-size:18px}
+.model h3{margin:18px 0 6px;font-size:15px}
 .model p{color:var(--mut);margin:6px 0}
 .formula{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;overflow-x:auto;white-space:pre-wrap}
 .mult-table{width:100%;min-width:0;margin-top:8px}
